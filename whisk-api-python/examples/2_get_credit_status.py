@@ -1,56 +1,50 @@
 import os
-# import sys # No longer needed typically
+import sys
 
-# project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-# if project_root not in sys.path:
-#     sys.path.insert(0, project_root)
+# Ensure whisk_api is importable if running script directly from examples dir
+# This path manipulation is more robust for script execution within the tool
+# if the package is not installed in a way that's automatically discoverable.
+# script_dir = os.path.dirname(os.path.abspath(__file__))
+# project_root_for_src = os.path.abspath(os.path.join(script_dir, '..'))
+# src_dir = os.path.join(project_root_for_src, 'src')
+# if src_dir not in sys.path:
+#    sys.path.insert(0, src_dir)
+# No longer needed if PYTHONPATH is set correctly or package installed with -e
 
-from whisk_api import WhiskAPI # Updated import
-from requests.exceptions import RequestException
+# from whisk_api import WhiskAPI # We are not making API calls in this informational script.
+# from requests.exceptions import RequestException
 
-def example_get_credit_status():
+def example_get_credit_status_info():
     """
-    Example related to fetching user status, potentially including credit status.
-    Note: The Python client does not have a dedicated `get_credit_status` method.
-    This example demonstrates fetching the authorization token, which might be
-    related or a prerequisite.
+    Informational script regarding credit status for the Whisk API.
     """
-    print("--- Example: Get User/Credit Status (via Auth Token) ---")
+    print("--- Information: Whisk API Credit Status ---")
+    print("\nThis Python client (`whisk-api-python`) currently does NOT have a specific method")
+    print("to directly check or retrieve your credit status for the Whisk service.")
+    print("The original TypeScript library may have had a method or an example")
+    print("that attempted this, possibly via `getAuthorizationToken` if that token")
+    print("contained such details, or via another endpoint not yet implemented here.")
 
-    session_cookie = os.environ.get("WHISK_SESSION_COOKIE")
-    if not session_cookie:
-        print("Error: WHISK_SESSION_COOKIE environment variable not set.")
-        return
+    print("\nHow to check your credit status (General Guidance):")
+    print("1. Visit the Google Labs website where Whisk is hosted (e.g., labs.google.com/fx/tools/whisk).")
+    print("2. Log in with your account.")
+    print("3. Your credit status, usage limits, or generation quotas are typically displayed")
+    print("   on your account page, profile section, or directly within the tool's interface.")
 
-    try:
-        whisk = WhiskAPI(session_cookie=session_cookie)
+    print("\nNote on API-based Credit Checking:")
+    print("- If a specific API endpoint for credit status exists and is known, a new method")
+    print("  could potentially be added to this Python client in the future.")
+    print("- Sometimes, credit information might be part of a general user profile endpoint.")
+    print("- The `get_authorization_token` method in this client fetches an access token for")
+    print("  `https://labs.google/fx/api/auth/session`; it's not guaranteed to contain credit info directly.")
+    print("  While this token might be used for other API calls, those calls would be separate.")
 
-        print("Attempting to fetch authorization token (as a proxy for user status)...")
-        # The TS example for getCreditStatus is very similar to getAuthorizationToken.
-        # We'll call get_authorization_token and discuss credit status in comments.
-        token_string = whisk.get_authorization_token()
+    print("\nFor developers using this library:")
+    print("If you identify a reliable API endpoint for credit status that can be called with")
+    print("the session cookie or a derived token, please consider contributing by opening an issue")
+    print("or a pull request to add this functionality to the client.")
 
-        if token_string:
-            print("Successfully fetched authorization token.")
-            print(f"Authorization Token: {token_string}")
-            print("\nNote on Credit Status:")
-            print("The current Python client does not have a specific 'get_credit_status' method.")
-            print("Credit status information might be part of a user profile endpoint not yet implemented,")
-            print("or implicitly available based on the validity of the authorization token/session.")
-            print("Please refer to the Whisk API documentation for details on how to fetch credit status.")
-            # If the token response were a JSON object that included credit details, you would parse it here.
-            # For example, if token_string was a dict: credit_info = token_string.get("credits")
-        else:
-            print("Failed to fetch authorization token.")
-
-    except RequestException as e:
-        print(f"API Request Error: {e}")
-    except ValueError as e:
-        print(f"Value Error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        print("--- Get User/Credit Status Example Finished ---")
+    print("\n--- End of Information ---")
 
 if __name__ == "__main__":
-    example_get_credit_status()
+    example_get_credit_status_info()

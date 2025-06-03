@@ -183,36 +183,170 @@ class ImageHistoryItem(BaseModel):
 # Response is List[ImageHistoryItem]
 
 
-# --- Create Project (getNewProjectId) ---
-class CreateProjectRequest(BaseModel):
-    title: str
+import time # Required for default_factory in CreateProjectClientContext
 
-class CreateProjectResponse(BaseModel):
-    project_id: str # Assuming the string response is the project ID.
-    # The TS example implies the direct Ok value is the string ID.
-    # If the API returns {"projectId": "value"}, this model is suitable.
-    # If it returns just "value", the client method will handle it directly.
+# --- Create Project (TRPC: media.createOrUpdateWorkflow) ---
+class CreateProjectClientContext(BaseModel):
+    tool: str = "BACKBONE"
+    session_id: str = Field(default_factory=lambda: f";{int(time.time() * 1000)}", alias="sessionId")
 
-# For now, assuming response is just a string (project_id) as per TS example:
-# newProject.Ok is used directly.
-# If it's a JSON like {"id": "project-id"}, then CreateProjectResponse would be:
-# class CreateProjectResponse(BaseModel):
-#     id: str
+class CreateProjectWorkflowMetadata(BaseModel):
+    workflow_name: str = Field(..., alias="workflowName") # Python: workflow_name, JSON: workflowName
+    class Config:
+        populate_by_name = True
+
+class CreateProjectInnerPayload(BaseModel):
+    client_context: CreateProjectClientContext = Field(default_factory=CreateProjectClientContext, alias="clientContext")
+    workflow_metadata: CreateProjectWorkflowMetadata # Python: workflow_metadata, JSON: workflowMetadata (no alias needed if dict key matches)
+
+    class Config:
+        populate_by_name = True # Allow initialization by either field name or alias
+
+class CreateProjectTrpcRequest(BaseModel): # New name for clarity
+    json_payload: CreateProjectInnerPayload = Field(..., alias="json")
+    class Config:
+        populate_by_name = True
 
 
-# --- Delete Projects ---
-class DeleteProjectsRequest(BaseModel):
-    project_ids: List[str] = Field(..., alias="projectIds") # Matches TS client direct usage
+# Models for parsing the TRPC response for create_project
+class CreateProjectTrpcResponseResultDataResult(BaseModel):
+    workflow_id: str = Field(..., alias="workflowId")
 
-# The response in TS is just Ok/Err, suggesting no specific content on success.
-# We can use a simple status model or the client method can return bool.
-class DeleteProjectsResponse(BaseModel):
-    status: str # e.g., "success" or a message.
-    # Or, if the response body is empty on success:
-    # success: bool = True (with a validator to ensure it's created only on success)
+class CreateProjectTrpcResponseResultDataJson(BaseModel):
+    result: CreateProjectTrpcResponseResultDataResult
+
+class CreateProjectTrpcResponseResultData(BaseModel):
+    json_data: CreateProjectTrpcResponseResultDataJson = Field(..., alias="json") # Assuming the 'json' key holds this structure
+
+class CreateProjectTrpcResponseResult(BaseModel):
+    data: CreateProjectTrpcResponseResultData
+
+class CreateProjectTrpcResponse(BaseModel):
+    result: CreateProjectTrpcResponseResult
+
+
+# --- Delete Projects (TRPC: media.deleteMedia) ---
+class DeleteProjectsInnerPayload(BaseModel):
+    parent: str = "userProject/" # Static value
+    names: List[str] # List of workflowIds
+
+class DeleteProjectsTrpcRequest(BaseModel):
+    json_payload: DeleteProjectsInnerPayload = Field(..., alias="json")
+    class Config:
+        populate_by_name = True
+
+# No specific response model for delete if just checking for errors,
+# but if there's a success structure, it could be added.
+# For now, client will check for `error` field in the response dict.
+# A generic error response might look like:
+class TrpcError(BaseModel):
+    code: int
+    message: str
+    # possibly other fields
+
+class TrpcErrorResponse(BaseModel):
+    error: TrpcError
 
 
 # --- Rename Project ---
+# Uses "media.createOrUpdateWorkflow" like create_project.
+# TS renameProject payload:
+# { "json": { "workflowId": projectId, "clientContext": { "sessionId": ";...", "tool": "BACKBONE", "workflowId": projectId }, "workflowMetadata": { "workflowName": newName } } }
+
+class RenameProjectWorkflowMetadata(BaseModel):
+    workflow_name: str = Field(..., alias="workflowName")
+    class Config:
+        populate_by_name = True
+
+class RenameProjectInnerPayload(BaseModel):
+    workflow_id: str = Field(..., alias="workflowId")
+    client_context: CreateProjectClientContext = Field(default_factory=CreateProjectClientContext, alias="clientContext")
+    workflow_metadata: RenameProjectWorkflowMetadata
+
+    class Config:
+        populate_by_name = True
+
+class RenameProjectTrpcRequest(BaseModel): # New name for clarity
+    json_payload: RenameProjectInnerPayload = Field(..., alias="json")
+    class Config:
+        populate_by_name = True
+
+# Rename response is also a workflowId from a similar structure as create.
+# We can reuse CreateProjectTrpcResponse or make a specific one if slightly different.
+# For now, assume client will parse similarly to create_project.
+
+
+# --- Project History ---
+# ... (rest of the types file from before, unchanged for this diff) ...
+class ProjectHistoryItem(BaseModel):
+    """
+    Represents a single project in the project history.
+    Based on the Projects interface in global.types.ts and example output.
+    """
+    name: str  # This seems to be the project ID
+    display_name: str = Field(..., alias="displayName")
+    create_time: str = Field(..., alias="createTime")
+    media: Optional[dict] = None # media field is complex, include as dict for now.
+
+# Response is List[ProjectHistoryItem]
+
+
+# --- Image History ---
+class ImageHistoryItemImageDetails(BaseModel):
+    """
+    Details of the image within media for image history.
+    """
+    prompt: str
+    model_name_type: str = Field(..., alias="modelNameType")
+    # seed: Optional[int] = None # Not directly in example's media.image but in FetchedImage
+    # media_generation_id: Optional[str] = Field(None, alias="mediaGenerationId") # Also not directly in example
+
+class ImageHistoryItemMedia(BaseModel):
+    """
+    Media object for image history item.
+    """
+    image: ImageHistoryItemImageDetails
+    # name: Optional[str] = None # Example doesn't show 'name' inside 'media'
+    # media_generation_id: Optional[dict] = None # Example doesn't show this nested here
+
+class ImageHistoryItem(BaseModel):
+    """
+    Represents a single image in the image generation history.
+    Based on Images interface and examples/8_get_image_generation_history.ts.
+    """
+    name: str # This is the image ID (e.g., "users/.../medias/...")
+    create_time: str = Field(..., alias="createTime")
+    media: ImageHistoryItemMedia
+
+# Response is List[ImageHistoryItem]
+
+
+# --- CreateProjectResponse (Original, potentially unused if client returns str for old endpoint) ---
+class CreateProjectResponse(BaseModel):
+    project_id: str
+
+# --- DeleteProjectsResponse (Original, potentially unused if client returns bool for old endpoint) ---
+class DeleteProjectsResponse(BaseModel):
+    status: str
+
+# --- RenameProjectResponse (Original, potentially unused if client returns str for old endpoint) ---
+class RenameProjectResponse(BaseModel):
+    project_id: str
+
+
+# --- Get Authorization Token (Auth Session) ---
+# Response from https://labs.google/fx/api/auth/session
+# is expected to be like {"access_token": "...", ...}
+class AuthSessionResponse(BaseModel):
+    access_token: str
+    # The actual response might contain other fields like 'user_id', 'email', etc.
+    # but we only need 'access_token' for the client method's current purpose.
+    # Other fields can be added here if they become relevant.
+
+# Old request models that might be deprecated by TRPC changes:
+# class CreateProjectRequest(BaseModel): title: str # Replaced by CreateProjectTrpcRequest
+# class DeleteProjectsRequest(BaseModel): project_ids: List[str] = Field(..., alias="projectIds") # Replaced by DeleteProjectsTrpcRequest
+# class RenameProjectRequest(BaseModel): project_id: str = Field(..., alias="projectId"); new_name: str = Field(..., alias="newName") # Potentially replaced by RenameProjectTrpcRequest
 class RenameProjectRequest(BaseModel):
     project_id: str = Field(..., alias="projectId")
     new_name: str = Field(..., alias="newName")
