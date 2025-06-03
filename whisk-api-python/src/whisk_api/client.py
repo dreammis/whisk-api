@@ -34,13 +34,26 @@ class WhiskAPI:
         # If it were a class, you'd instantiate it here:
         # self.request_handler = RequestHandler()
 
-    def _make_api_request(self, method: str, endpoint_path: str, query_params: Optional[dict] = None, payload: Optional[dict] = None) -> dict:
+    def _make_api_request(
+        self,
+        method: str,
+        endpoint_path: Optional[str] = None, # Optional if absolute_url is given
+        query_params: Optional[dict] = None,
+        payload: Optional[dict] = None,
+        absolute_url: Optional[str] = None
+    ) -> dict:
         """
         Internal helper to make authenticated API requests.
         Constructs URL with query parameters if provided.
+        Uses absolute_url if provided, otherwise combines BASE_URL and endpoint_path.
         """
-        # Ensure endpoint_path does not start with a slash if BASE_URL ends with one, or vice-versa
-        url = f"{self.BASE_URL.rstrip('/')}/{endpoint_path.lstrip('/')}"
+        if absolute_url:
+            url = absolute_url
+        elif endpoint_path:
+            # Ensure endpoint_path does not start with a slash if BASE_URL ends with one, or vice-versa
+            url = f"{self.BASE_URL.rstrip('/')}/{endpoint_path.lstrip('/')}"
+        else:
+            raise ValueError("Either endpoint_path or absolute_url must be provided to _make_api_request.")
 
         headers = self.authenticator.get_auth_headers()
         # Content-Type is often required for POST/PUT/PATCH requests with JSON
@@ -389,40 +402,34 @@ class WhiskAPI:
         Fetches an authorization token.
         The exact nature of this token (e.g., for what service it's used) is based
         on the TS client's `getAuthorizationToken` method.
+        The actual URL called by TS client for this is 'https://labs.google/fx/api/auth/session'
+        and it expects an 'access_token' from the JSON response.
 
         Returns:
-            The authorization token string.
+            The access_token string.
         """
-        # Endpoint based on TS example (examples/1_get_auth_tokens.ts)
-        # `whisk.getAuthorizationToken()`
-        # TS Client: `return await this.authenticatedRequest<string>("/v1/getAuthorizationToken");`
-        # This indicates a GET request to /v1/getAuthorizationToken
-        endpoint_path = "v1/getAuthorizationToken"
+        auth_session_url = "https://labs.google/fx/api/auth/session"
 
-        response_json = self._make_api_request("GET", endpoint_path)
+        # Make the request using the absolute URL
+        # No query_params or payload for this GET request.
+        response_data = self._make_api_request(
+            method="GET",
+            absolute_url=auth_session_url
+            # No endpoint_path needed as absolute_url is provided
+        )
 
-        # TS example `token.Ok` suggests the response `Ok` value is the token string.
+        # Response is expected to be a JSON like: {"access_token": "...", ...}
         try:
-            if isinstance(response_json, str): # Direct string response
-                return response_json
-            elif isinstance(response_json, dict):
-                # Typically, a token might be under a "token" or "accessToken" key.
-                if "token" in response_json:
-                    return str(response_json["token"])
-                elif "authorizationToken" in response_json: # Matching the method name
-                    return str(response_json["authorizationToken"])
-                elif "accessToken" in response_json:
-                    return str(response_json["accessToken"])
-                else: # Fallback if it's a simple dict with one value being the token
-                    if len(response_json) == 1:
-                        return str(list(response_json.values())[0])
-                    raise ValueError("Token not found in response dict.")
+            if isinstance(response_data, dict) and "access_token" in response_data:
+                return str(response_data["access_token"])
             else:
-                raise ValueError(f"Unexpected response type for get authorization token: {type(response_json)}")
-        except Exception as e:
-            print(f"Error parsing AuthorizationTokenResponse: {e}")
-            print(f"Received JSON: {response_json}")
-            raise ValueError(f"Failed to parse response for get authorization token: {e}")
+                # Log the actual response if it's not as expected for debugging
+                print(f"Unexpected response structure for get_authorization_token: {response_data}")
+                raise ValueError("access_token not found in response from auth/session endpoint.")
+        except Exception as e: # Catch any error during parsing or if not dict
+            print(f"Error parsing access_token from response: {e}")
+            print(f"Received data: {response_data}")
+            raise ValueError(f"Failed to parse access_token from auth/session response: {e}")
 
 
 if __name__ == '__main__':

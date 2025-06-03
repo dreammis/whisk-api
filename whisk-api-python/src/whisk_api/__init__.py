@@ -6,10 +6,10 @@ from .types import (
     RefineImageRequest,
     ProjectHistoryItem,
     ImageHistoryItem,
-    CreateProjectRequest, CreateProjectResponse, # Added CreateProjectResponse for completeness
+    CreateProjectRequest, CreateProjectResponse,
     DeleteProjectsRequest, DeleteProjectsResponse,
-    RenameProjectRequest, RenameProjectResponse,  # Added RenameProjectResponse for completeness
-    AuthorizationTokenResponse # Added for completeness
+    RenameProjectRequest, RenameProjectResponse,
+    AuthSessionResponse # Updated from AuthorizationTokenResponse
 )
 # Import core request function if it's meant to be part of the public API,
 # otherwise, it's an internal detail. For now, assume it's internal.
@@ -33,6 +33,6 @@ __all__ = [
     "DeleteProjectsResponse",
     "RenameProjectRequest",
     "RenameProjectResponse",
-    "AuthorizationTokenResponse",
+    "AuthSessionResponse", # Updated
     "__version__",
 ]

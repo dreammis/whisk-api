@@ -224,9 +224,11 @@ class RenameProjectResponse(BaseModel):
     project_id: str
 
 
-# --- Get Authorization Token ---
-# TS example: token.Ok is the token string.
-# If the API returns {"token": "value"}, this model is suitable.
-# If it returns just "value", the client method will handle it directly.
-class AuthorizationTokenResponse(BaseModel):
-    token: str
+# --- Get Authorization Token (Auth Session) ---
+# Response from https://labs.google/fx/api/auth/session
+# is expected to be like {"access_token": "...", ...}
+class AuthSessionResponse(BaseModel):
+    access_token: str
+    # The actual response might contain other fields like 'user_id', 'email', etc.
+    # but we only need 'access_token' for the client method's current purpose.
+    # Other fields can be added here if they become relevant.
