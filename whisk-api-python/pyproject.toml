@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "whisk-api-python" # Changed to reflect the directory and be more PyPI-friendly
+version = "0.1.0"
+authors = [
+  { name = "AI SWE", email = "ai-swe@example.com" }, # Updated placeholder
+]
+description = "An unofficial Python API wrapper for Google Labs' Whisk image generation platform."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT License"} # Specify license correctly
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "requests>=2.20.0",
+    "pydantic>=2.0.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/rohitaryal/whisk-api" # Keep original for now
+"Repository" = "https://github.com/rohitaryal/whisk-api" # Or new repo if forked
+"Bug Tracker" = "https://github.com/rohitaryal/whisk-api/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"] # Look for packages in the src directory
+
+[tool.pytest.ini_options]
+markers = [
+    "api_call: marks tests that make real API calls (and require WHISK_SESSION_COOKIE)",
+    "smoke: marks basic smoke tests for API availability, etc.",
+]
