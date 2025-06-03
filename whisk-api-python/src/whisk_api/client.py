@@ -42,23 +42,25 @@ class WhiskAPI:
         # Ensure endpoint_path does not start with a slash if BASE_URL ends with one, or vice-versa
         url = f"{self.BASE_URL.rstrip('/')}/{endpoint_path.lstrip('/')}"
 
-        if query_params:
-            # Filter out None values from params
-            filtered_params = {k: v for k, v in query_params.items() if v is not None}
-            if filtered_params:
-                url += "?" + requests.compat.urlencode(filtered_params)
-
         headers = self.authenticator.get_auth_headers()
         # Content-Type is often required for POST/PUT/PATCH requests with JSON
         if payload is not None: # Check specifically for None, as empty dict {} is a valid payload
             headers["Content-Type"] = "application/json"
 
         try:
-            # Assuming make_request can handle None for json_payload if method is GET/DELETE
-            return make_request(url, method, headers=headers, json_payload=payload)
+            # Pass query_params directly to the updated make_request function
+            return make_request(
+                url=url,
+                method=method,
+                headers=headers,
+                json_payload=payload,
+                query_params=query_params # Pass the original query_params dict
+            )
         except requests.exceptions.RequestException as e:
             # Log or handle more specifically if needed
-            print(f"API request to {url} failed: {e}")
+            # The URL printed here will not include query params anymore, which is fine
+            # as make_request handles them.
+            print(f"API request to {method} {url} (params: {query_params}) failed: {e}")
             # You might want to raise a custom exception here
             raise
 

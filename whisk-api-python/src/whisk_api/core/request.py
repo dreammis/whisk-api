@@ -1,14 +1,26 @@
 import requests
+from typing import Optional, Dict, Any # For type hinting
 
-def make_request(url: str, method: str, headers: dict = None, json_payload: dict = None) -> dict:
+DEFAULT_TIMEOUT = 30  # seconds
+
+def make_request(
+    url: str,
+    method: str,
+    headers: Optional[Dict[str, str]] = None,
+    json_payload: Optional[Dict[str, Any]] = None,
+    query_params: Optional[Dict[str, Any]] = None,
+    timeout: int = DEFAULT_TIMEOUT
+) -> dict:
     """
-    Makes an HTTP request to the specified URL.
+    Makes an HTTP request to the specified URL with a default timeout.
 
     Args:
         url: The URL to make the request to.
         method: The HTTP method to use (e.g., "GET", "POST").
         headers: A dictionary of headers to include in the request.
         json_payload: A dictionary to send as JSON in the request body.
+        query_params: A dictionary of query parameters to append to the URL.
+        timeout: Timeout in seconds for the request.
 
     Returns:
         A dictionary representing the JSON response from the server.
@@ -17,14 +29,23 @@ def make_request(url: str, method: str, headers: dict = None, json_payload: dict
         requests.exceptions.RequestException: If an error occurs during the request.
     """
     try:
-        response = requests.request(method, url, headers=headers, json=json_payload)
+        response = requests.request(
+            method,
+            url,
+            headers=headers,
+            json=json_payload,
+            params=query_params,
+            timeout=timeout
+        )
         response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
         return response.json()
     except requests.exceptions.RequestException as e:
         # You can log the error here if needed
         # print(f"Error making request: {e}")
         raise e
-    except ValueError: # Handle cases where response is not JSON
+    except ValueError: # Handle cases where response is not JSON (e.g., if raise_for_status passes but content isn't JSON)
+        # This case is less likely if raise_for_status() is effective and API guarantees JSON for success,
+        # but good as a safeguard.
         raise requests.exceptions.RequestException("Response was not valid JSON.")
 
 if __name__ == '__main__':
